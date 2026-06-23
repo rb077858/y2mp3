@@ -109,7 +109,7 @@ async function convertAndDownload() {
     // הכתובת של ה-API
     const apiUrl = 'https://cnv.cx/v2/converter';
 
-    // יצירת ה-Body בפורמט x-www-form-urlencoded כפי שביקשת
+    // יצירת ה-Body בפורמט x-www-form-urlencoded
     const details = {
         'link': urlInput,
         'format': 'mp3',
@@ -128,11 +128,12 @@ async function convertAndDownload() {
     formBody = formBody.join("&");
 
     try {
-        // שליחת בקשת ה-POST
+        // שליחת בקשת ה-POST עם ה-Key בתוך ה-Headers
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'key': 'YmFjMTRjMjdmMjU5MTAzZTNkYmM2MDdmMmVmN2FhZmJhN2JiNDEwNjAyZDliNTk3ZWZkZDkyNmIzODgxOTc4OHxNVGM0TWpFNU5UVTJOemt5TWc9PQ=='
             },
             body: formBody
         });
@@ -162,7 +163,7 @@ async function convertAndDownload() {
     } catch (error) {
         console.error(error);
         statusMsg.style.color = 'red';
-        statusMsg.innerText = 'אירעה שגיאה. ייתכן וה-API חוסם בקשות דפדפן (CORS).';
+        statusMsg.innerText = 'אירעה שגיאה. ייתכן והמפתח פג תוקף או שה-API חוסם בקשות דפדפן (CORS).';
     } finally {
         // כיבוי הטעינה והחזרת הכפתור לפעילות
         loader.style.display = 'none';
