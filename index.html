@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מוריד שירים מיוטיוב</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 450px;
+            width: 100%;
+        }
+        h1 {
+            color: #ff0000;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+            text-align: left;
+        }
+        button {
+            background-color: #ff0000;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #cc0000;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        .loader {
+            display: none;
+            margin: 15px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff0000;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>הורדת MP3 מיוטיוב</h1>
+    <input type="text" id="youtubeUrl" placeholder="הדבק כאן את הקישור מיוטיוב (URL)...">
+    <button id="downloadBtn" onclick="convertAndDownload()">הורד שיר</button>
+    
+    <div class="loader" id="loader"></div>
+    <div class="status" id="statusMessage"></div>
+</div>
+
+<script>
+async function convertAndDownload() {
+    const urlInput = document.getElementById('youtubeUrl').value.trim();
+    const statusMsg = document.getElementById('statusMessage');
+    const loader = document.getElementById('loader');
+    const btn = document.getElementById('downloadBtn');
+
+    if (!urlInput) {
+        statusMsg.style.color = 'red';
+        statusMsg.innerText = 'אנא הכנס קישור תקין.';
+        return;
+    }
+
+    // איפוס מצב ומראה טעינה
+    statusMsg.innerText = 'מעבד את הבקשה, אנא המתן...';
+    statusMsg.style.color = '#333';
+    loader.style.display = 'block';
+    btn.disabled = true;
+
+    // הכתובת של ה-API
+    const apiUrl = 'https://cnv.cx/v2/converter';
+
+    // יצירת ה-Body בפורמט x-www-form-urlencoded כפי שביקשת
+    const details = {
+        'link': urlInput,
+        'format': 'mp3',
+        'audioBitrate': '320',
+        'videoQuality': '720',
+        'filenameStyle': 'pretty',
+        'vCodec': 'h264'
+    };
+
+    let formBody = [];
+    for (let property in details) {
+        let encodedKey = encodeURIComponent(property);
+        let encodedValue = encodeURIComponent(details[property]);
+        formBody.push(encodedKey + "=" + encodedValue);
+    }
+    formBody = formBody.join("&");
+
+    try {
+        // שליחת בקשת ה-POST
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+            },
+            body: formBody
+        });
+
+        if (!response.ok) {
+            throw new Error('שגיאה בתקשורת עם השרת');
+        }
+
+        const data = await response.json();
+
+        if (data.status === 'tunnel' && data.url) {
+            statusMsg.style.color = 'green';
+            statusMsg.innerText = 'ההורדה מתחילה ברגע זה!';
+            
+            // יצירת אלמנט קישור פיקטיבי והפעלה אוטומטית שלו כדי להתחיל הורדה
+            const downloadLink = document.createElement('a');
+            downloadLink.href = data.url;
+            downloadLink.setAttribute('download', data.filename || 'audio.mp3');
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        } else {
+            statusMsg.style.color = 'red';
+            statusMsg.innerText = 'ה-API החזיר תשובה לא צפויה.';
+        }
+
+    } catch (error) {
+        console.error(error);
+        statusMsg.style.color = 'red';
+        statusMsg.innerText = 'אירעה שגיאה. ייתכן וה-API חוסם בקשות דפדפן (CORS).';
+    } finally {
+        // כיבוי הטעינה והחזרת הכפתור לפעילות
+        loader.style.display = 'none';
+        btn.disabled = false;
+    }
+}
+</script>
+
+</body>
+</html>
