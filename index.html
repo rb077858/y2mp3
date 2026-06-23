@@ -59,6 +59,7 @@
             margin-top: 20px;
             font-weight: bold;
             color: #333;
+            word-break: break-word;
         }
         .loader {
             display: none;
@@ -100,55 +101,46 @@ async function convertAndDownload() {
         return;
     }
 
-    // איפוס מצב ומראה טעינה
-    statusMsg.innerText = 'מעבד את הבקשה, אנא המתן...';
+    statusMsg.innerText = 'שולח בקשה ועוקף חסימת דפדפן, אנא המתן...';
     statusMsg.style.color = '#333';
     loader.style.display = 'block';
     btn.disabled = true;
 
-    // הכתובת של ה-API
-    const apiUrl = 'https://cnv.cx/v2/converter';
+    // שימוש בפרוקסי ציבורי לעקיפת חסימת CORS של הדפדפן
+    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+    const targetUrl = 'https://cnv.cx/v2/converter';
 
-    // יצירת ה-Body בפורמט x-www-form-urlencoded
-    const details = {
-        'link': urlInput,
-        'format': 'mp3',
-        'audioBitrate': '320',
-        'videoQuality': '720',
-        'filenameStyle': 'pretty',
-        'vCodec': 'h264'
+    // המידע שנשלח ב-Body כולל ה-key
+    const payload = {
+        link: urlInput,
+        format: 'mp3',
+        audioBitrate: '320',
+        videoQuality: '720',
+        filenameStyle: 'pretty',
+        vCodec: 'h264',
+        key: 'YmFjMTRjMjdmMjU5MTAzZTNkYmM2MDdmMmVmN2FhZmJhN2JiNDEwNjAyZDliNTk3ZWZkZDkyNmIzODgxOTc4OHxNVGM0TWpFNU5UVTJOemt5TWc9PQ=='
     };
 
-    let formBody = [];
-    for (let property in details) {
-        let encodedKey = encodeURIComponent(property);
-        let encodedValue = encodeURIComponent(details[property]);
-        formBody.push(encodedKey + "=" + encodedValue);
-    }
-    formBody = formBody.join("&");
-
     try {
-        // שליחת בקשת ה-POST עם ה-Key בתוך ה-Headers
-        const response = await fetch(apiUrl, {
+        const response = await fetch(proxyUrl + targetUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                'key': 'YmFjMTRjMjdmMjU5MTAzZTNkYmM2MDdmMmVmN2FhZmJhN2JiNDEwNjAyZDliNTk3ZWZkZDkyNmIzODgxOTc4OHxNVGM0TWpFNU5UVTJOemt5TWc9PQ=='
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
-            body: formBody
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-            throw new Error('שגיאה בתקשורת עם השרת');
+            throw new Error('השרת החזיר שגיאה: ' + response.status);
         }
 
         const data = await response.json();
 
         if (data.status === 'tunnel' && data.url) {
             statusMsg.style.color = 'green';
-            statusMsg.innerText = 'ההורדה מתחילה ברגע זה!';
+            statusMsg.innerText = 'ההורדה מתחילה!';
             
-            // יצירת אלמנט קישור פיקטיבי והפעלה אוטומטית שלו כדי להתחיל הורדה
             const downloadLink = document.createElement('a');
             downloadLink.href = data.url;
             downloadLink.setAttribute('download', data.filename || 'audio.mp3');
@@ -157,15 +149,14 @@ async function convertAndDownload() {
             document.body.removeChild(downloadLink);
         } else {
             statusMsg.style.color = 'red';
-            statusMsg.innerText = 'ה-API החזיר תשובה לא צפויה.';
+            statusMsg.innerText = 'תשובה לא צפויה מהשרת: ' + JSON.stringify(data);
         }
 
     } catch (error) {
         console.error(error);
         statusMsg.style.color = 'red';
-        statusMsg.innerText = 'אירעה שגיאה. ייתכן והמפתח פג תוקף או שה-API חוסם בקשות דפדפן (CORS).';
+        statusMsg.innerText = 'שגיאה: לא ניתן היה לבצע את הבקשה. ודא שהפרוקסי פעיל או שהמפתח בתוקף.';
     } finally {
-        // כיבוי הטעינה והחזרת הכפתור לפעילות
         loader.style.display = 'none';
         btn.disabled = false;
     }
