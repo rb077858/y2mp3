@@ -35,6 +35,8 @@
             border-radius: 5px;
             box-sizing: border-box;
             font-size: 16px;
+            text-align: left;
+            direction: ltr;
         }
         button {
             background-color: #28a745;
@@ -75,13 +77,26 @@
             font-weight: bold;
             color: #555;
         }
+        .proxy-note {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #777;
+            background-color: #fff3cd;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ffeeba;
+        }
+        .proxy-note a {
+            color: #856404;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>הורדת שירים מיוטיוב</h1>
-    <input type="text" id="youtube-url" placeholder="הדבק כאן את הקישור מיוטיוב...">
+    <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=...">
     <button id="start-btn" onclick="startDownload()">הורד שיר</button>
 
     <div class="progress-container" id="progress-container">
@@ -89,6 +104,10 @@
             <div class="progress-fill" id="progress-fill"></div>
         </div>
         <div id="status-text">מתכונן...</div>
+    </div>
+
+    <div class="proxy-note">
+        ⚠️ <strong>שים לב:</strong> אם מופיעה שגיאת חיבור, יש להיכנס פעם אחת ל-<a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank">קישור הזה</a> וללחוץ על הכפתור כדי להפעיל את הפרוקסי הזמני.
     </div>
 </div>
 
@@ -105,20 +124,24 @@
             return;
         }
 
-        // קידוד הקישור כדי שיתאים לפרמטר ב-URL (URL Encoding)
+        // קידוד הקישור כדי שיתאים כפרמטר ב-URL
         const encodedUrl = encodeURIComponent(urlInput);
-        const apiUrl = `https://api.kofiko.net/api/download?url=${encodedUrl}&format=mp3`;
+        const targetApiUrl = `https://api.kofiko.net/api/download?url=${encodedUrl}&format=mp3`;
+        
+        // שימוש בפרוקסי ציבורי לעקיפת חסימת CORS בדפדפן
+        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        const apiUrl = proxyUrl + targetApiUrl;
 
-        // שינוי מצב כפתור ותצוגה
+        // שינוי מצב כפתור ותצוגת אלמנטים
         startBtn.disabled = true;
         progressContainer.style.display = 'block';
         progressFill.style.width = '0%';
-        statusText.innerText = 'מתחבר לשרת...';
+        statusText.innerText = 'מתחבר לשרת דרך הפרוקסי...';
 
-        // יצירת חיבור EventSource ל-API
+        // יצירת חיבור EventSource (זרם נתונים בזמן אמת)
         const eventSource = new EventSource(apiUrl);
 
-        // האזנה לאירוע מסוג progress
+        // האזנה לאירועי התקדמות (progress)
         eventSource.addEventListener('progress', function(event) {
             try {
                 const data = JSON.parse(event.data);
@@ -126,26 +149,26 @@
                 progressFill.style.width = progress + '%';
                 statusText.innerText = `מעבד... ${progress}%`;
             } catch (e) {
-                console.error("שגיאה בפענוח הנתונים", e);
+                console.error("שגיאה בפענוח הנתונים מהשרת", e);
             }
         });
 
-        // האזנה לאירוע מסוג complete
+        // האזנה לאירוע סיום (complete)
         eventSource.addEventListener('complete', function(event) {
             try {
                 const data = JSON.parse(event.data);
                 progressFill.style.width = '100%';
                 statusText.innerText = 'העיבוד הסתיים! מוריד את הקובץ...';
 
-                // סגירת החיבור כדי שלא ימשיך לרוץ ברקע
+                // סגירת החיבור כדי שלא יישאר פתוח ברקע
                 eventSource.close();
                 startBtn.disabled = false;
 
-                // הורדה אוטומטית של השיר
+                // יצירת הורדה אוטומטית בדפדפן
                 if (data.download_url) {
                     const a = document.createElement('a');
                     a.href = data.download_url;
-                    a.download = ''; // מפעיל הורדה במקום ניווט
+                    a.download = ''; 
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -157,10 +180,10 @@
             }
         });
 
-        // טיפול בשגיאות חיבור
+        // טיפול בשגיאות (למשל אם הפרוקסי חסום או השרת למטה)
         eventSource.onerror = function(err) {
             console.error("EventSource נתקל בשגיאה:", err);
-            statusText.innerText = 'אירעה שגיאה בחיבור לשרת.';
+            statusText.innerText = 'אירעה שגיאה בחיבור לשרת. ודא שהפעלת את הגישה לפרוקסי בקישור למטה.';
             eventSource.close();
             startBtn.disabled = false;
         };
