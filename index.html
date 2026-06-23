@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מוריד שירים מיוטיוב</title>
+    <title>הורדת שירים מיוטיוב</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -15,16 +15,16 @@
             margin: 0;
         }
         .container {
-            background: white;
+            background-color: #ffffff;
             padding: 30px;
             border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             text-align: center;
             max-width: 450px;
             width: 100%;
         }
         h1 {
-            color: #ff0000;
+            color: #333;
             margin-bottom: 20px;
         }
         input[type="text"] {
@@ -35,132 +35,136 @@
             border-radius: 5px;
             box-sizing: border-box;
             font-size: 16px;
-            text-align: left;
         }
         button {
-            background-color: #ff0000;
+            background-color: #28a745;
             color: white;
-            border: none;
             padding: 12px 20px;
-            font-size: 16px;
+            border: none;
             border-radius: 5px;
             cursor: pointer;
+            font-size: 16px;
             width: 100%;
-            transition: background 0.2s;
+            transition: background 0.3s;
         }
         button:hover {
-            background-color: #cc0000;
+            background-color: #218838;
         }
         button:disabled {
-            background-color: #ccc;
+            background-color: #6c757d;
             cursor: not-allowed;
         }
-        .status {
+        .progress-container {
             margin-top: 20px;
-            font-weight: bold;
-            color: #333;
-            word-break: break-word;
-        }
-        .loader {
             display: none;
-            margin: 15px auto;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #ff0000;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .progress-bar {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 20px;
+            width: 0%;
+            background-color: #007bff;
+            transition: width 0.2s ease;
+        }
+        #status-text {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #555;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>הורדת MP3 מיוטיוב</h1>
-    <input type="text" id="youtubeUrl" placeholder="הדבק כאן את הקישור מיוטיוב (URL)...">
-    <button id="downloadBtn" onclick="convertAndDownload()">הורד שיר</button>
-    
-    <div class="loader" id="loader"></div>
-    <div class="status" id="statusMessage"></div>
+    <h1>הורדת שירים מיוטיוב</h1>
+    <input type="text" id="youtube-url" placeholder="הדבק כאן את הקישור מיוטיוב...">
+    <button id="start-btn" onclick="startDownload()">הורד שיר</button>
+
+    <div class="progress-container" id="progress-container">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div id="status-text">מתכונן...</div>
+    </div>
 </div>
 
 <script>
-async function convertAndDownload() {
-    const urlInput = document.getElementById('youtubeUrl').value.trim();
-    const statusMsg = document.getElementById('statusMessage');
-    const loader = document.getElementById('loader');
-    const btn = document.getElementById('downloadBtn');
+    function startDownload() {
+        const urlInput = document.getElementById('youtube-url').value.trim();
+        const startBtn = document.getElementById('start-btn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressFill = document.getElementById('progress-fill');
+        const statusText = document.getElementById('status-text');
 
-    if (!urlInput) {
-        statusMsg.style.color = 'red';
-        statusMsg.innerText = 'אנא הכנס קישור תקין.';
-        return;
-    }
+        if (!urlInput) {
+            alert('אנא הכנס קישור תקין של יוטיוב');
+            return;
+        }
 
-    statusMsg.innerText = 'שולח בקשה ועוקף חסימת דפדפן, אנא המתן...';
-    statusMsg.style.color = '#333';
-    loader.style.display = 'block';
-    btn.disabled = true;
+        // קידוד הקישור כדי שיתאים לפרמטר ב-URL (URL Encoding)
+        const encodedUrl = encodeURIComponent(urlInput);
+        const apiUrl = `https://api.kofiko.net/api/download?url=${encodedUrl}&format=mp3`;
 
-    // שימוש בפרוקסי ציבורי לעקיפת חסימת CORS של הדפדפן
-    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-    const targetUrl = 'https://cnv.cx/v2/converter';
+        // שינוי מצב כפתור ותצוגה
+        startBtn.disabled = true;
+        progressContainer.style.display = 'block';
+        progressFill.style.width = '0%';
+        statusText.innerText = 'מתחבר לשרת...';
 
-    // המידע שנשלח ב-Body כולל ה-key
-    const payload = {
-        link: urlInput,
-        format: 'mp3',
-        audioBitrate: '320',
-        videoQuality: '720',
-        filenameStyle: 'pretty',
-        vCodec: 'h264',
-        key: 'YmFjMTRjMjdmMjU5MTAzZTNkYmM2MDdmMmVmN2FhZmJhN2JiNDEwNjAyZDliNTk3ZWZkZDkyNmIzODgxOTc4OHxNVGM0TWpFNU5UVTJOemt5TWc9PQ=='
-    };
+        // יצירת חיבור EventSource ל-API
+        const eventSource = new EventSource(apiUrl);
 
-    try {
-        const response = await fetch(proxyUrl + targetUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify(payload)
+        // האזנה לאירוע מסוג progress
+        eventSource.addEventListener('progress', function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                const progress = data.progress;
+                progressFill.style.width = progress + '%';
+                statusText.innerText = `מעבד... ${progress}%`;
+            } catch (e) {
+                console.error("שגיאה בפענוח הנתונים", e);
+            }
         });
 
-        if (!response.ok) {
-            throw new Error('השרת החזיר שגיאה: ' + response.status);
-        }
+        // האזנה לאירוע מסוג complete
+        eventSource.addEventListener('complete', function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                progressFill.style.width = '100%';
+                statusText.innerText = 'העיבוד הסתיים! מוריד את הקובץ...';
 
-        const data = await response.json();
+                // סגירת החיבור כדי שלא ימשיך לרוץ ברקע
+                eventSource.close();
+                startBtn.disabled = false;
 
-        if (data.status === 'tunnel' && data.url) {
-            statusMsg.style.color = 'green';
-            statusMsg.innerText = 'ההורדה מתחילה!';
-            
-            const downloadLink = document.createElement('a');
-            downloadLink.href = data.url;
-            downloadLink.setAttribute('download', data.filename || 'audio.mp3');
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-        } else {
-            statusMsg.style.color = 'red';
-            statusMsg.innerText = 'תשובה לא צפויה מהשרת: ' + JSON.stringify(data);
-        }
+                // הורדה אוטומטית של השיר
+                if (data.download_url) {
+                    const a = document.createElement('a');
+                    a.href = data.download_url;
+                    a.download = ''; // מפעיל הורדה במקום ניווט
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+            } catch (e) {
+                statusText.innerText = 'שגיאה בקבלת קישור ההורדה.';
+                eventSource.close();
+                startBtn.disabled = false;
+            }
+        });
 
-    } catch (error) {
-        console.error(error);
-        statusMsg.style.color = 'red';
-        statusMsg.innerText = 'שגיאה: לא ניתן היה לבצע את הבקשה. ודא שהפרוקסי פעיל או שהמפתח בתוקף.';
-    } finally {
-        loader.style.display = 'none';
-        btn.disabled = false;
+        // טיפול בשגיאות חיבור
+        eventSource.onerror = function(err) {
+            console.error("EventSource נתקל בשגיאה:", err);
+            statusText.innerText = 'אירעה שגיאה בחיבור לשרת.';
+            eventSource.close();
+            startBtn.disabled = false;
+        };
     }
-}
 </script>
 
 </body>
